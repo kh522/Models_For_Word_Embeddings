@@ -10,15 +10,15 @@ import cvxpy as cvx
 
 def init():
 	#Loading in arguments
-	global args,word_vec,sentences
+	global args,word_vec,sentences,Y
 	parser = argparse.ArgumentParser(description='Word Embedding Models')
 	parser.add_argument('--model', default='pca', type=str,
-	                    help='Select Word Embedding Model. Valid configurations are pca, pca3, max-pool, max-pool3, max-pool-pca and max-pool-pca3')
+	                    help='Select Word Embedding Model. Valid configurations are pca, pca3, avg, avg3, max-pool, max-pool3, max-pool-pca and max-pool-pca3')
 
 	args = parser.parse_args()
-	if not args.model in ['pca','pca3','max-pool','max-pool3','max-pool-pca','max-pool-pca3']:
+	if not args.model in ['pca','pca3','avg','avg3','max-pool','max-pool3','max-pool-pca','max-pool-pca3']:
 		print "Invalid Model Initialization:"
-		print "Not one of: \n pca \n pca3 \n max-pool \n max-pool3 \n max-pool-pca \n max-pool-pca3"
+		print "Not one of: \n pca \n pca3 \n avg \n avg3 \n max-pool \n max-pool3 \n max-pool-pca \n max-pool-pca3"
 		exit()
 	#Reading from pre-trained word-embeddings
 	start=time.time()
@@ -63,7 +63,7 @@ def max_pool_pca(s):
 	return np.diag(s)
 
 def main():
-	global args,word_vec,sentences
+	global args,word_vec,sentences,Y
 	word_vec={}
 	init()
 	print "Currently training: " + args.model
@@ -75,7 +75,7 @@ def main():
 		s=[]
 		for i,word in enumerate(sentence):
 			
-			if args.model=="pca" or args.model=="max-pool" or args.model=="max-pool-pca":
+			if args.model=="pca" or args.model=="max-pool" or args.model=="avg" or args.model=="max-pool-pca":
 				x=word_vec.get(word,default_val)
 			else:
 				if i==0:
@@ -96,12 +96,17 @@ def main():
 				if args.model=='max-pool' or args.model=="max-pool3":
 					s[s>0] = np.fmax(np.abs(x)[s>0],np.abs(s)[s>0])
 					s[s<=0] = -1*np.fmax(np.abs(x)[s<=0],np.abs(s)[s<=0])
+				elif args.model=='avg' or args.model=='avg3':
+					s=x+s
 				else:
 					s=np.concatenate((s,x),axis=1)
 		
 		if (args.model=='pca' or args.model=='pca3'):	
 			p = PCA(n_components=3)
 			s = p.fit_transform(s)
+
+		if (args.model=='avg' or args.model=='avg3'):	
+			s=s/(len(sentence))
 
 		if (args.model=="max-pool-pca" or args.model=="max-pool-pca3"):
 			s=max_pool_pca(s)
@@ -128,6 +133,10 @@ def main():
 		filename='Xmax.p'
 	elif(args.model=='max-pool3'):
 		filename='Xmax3.p'
+	elif(args.model=='avg'):
+		filename='Xavg.p'
+	elif(args.model=='avg3'):
+		filename='Xavg3.p'
 	elif(args.model=='max-pool-pca'):
 		filename='Xmpca.p'
 	elif(args.model=='max-pool-pca3'):
